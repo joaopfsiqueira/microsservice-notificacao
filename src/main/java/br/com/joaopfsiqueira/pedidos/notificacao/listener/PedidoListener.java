@@ -22,6 +22,12 @@ public class PedidoListener {
     // metodo que será chamado quando uma mensagem for recebida
     @RabbitListener(queues = "pedidos.v1.notificacao")
     public void enviarNotificacao(Pedido pedido){
+        logger.info("Tentando consumir a mensagem");
+
+        if(pedido.getValorTotal() > 100) {
+            throw new RuntimeException("Valor muito alto");
+        }
+
         emailService.enviarEmail(pedido);
         logger.info("Notificacao gerada: {}", pedido.toString());
     }
