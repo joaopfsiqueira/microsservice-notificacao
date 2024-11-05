@@ -15,6 +15,9 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Configuration
 public class RabbitMQConfig {
 
@@ -24,22 +27,51 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.queue.name}")
     private String queueName;
 
+    @Value("${rabbitmq.exchange.dlx.name}")
+    private String exchangeDlxName;
+
+    @Value("${rabbitmq.queue.dlq.name}")
+    private String queueDlqName;
+
     @Bean
     public FanoutExchange pedidosExchange() {
         return new FanoutExchange(exchangeName);
     }
 
+    @Bean
+    public FanoutExchange pedidosExchangeDlx() {
+        return new FanoutExchange(exchangeDlxName);
+    }
+
     // Criação da fila
     @Bean
     public Queue notificacaoQueue() {
-        return new Queue(queueName);
+
+        // Configuração de argumentos para a fila, onde os argumentos no caso é uma fila deadletter.
+        Map<String, Object> argumentos = new HashMap<>();
+        argumentos.put("x-dead-letter-exchange", exchangeDlxName);
+
+        return new Queue(queueName, true, false, false, argumentos);
     }
+
+
+    // Criação da fila deadletter
+    @Bean
+    public Queue notificacaoQueueDlq() {
+        return new Queue(queueDlqName);
+    }
+
 
     // Criação do binding da fila com o exchange
     @Bean
     public Binding bindingQueue() {
         return BindingBuilder.bind(notificacaoQueue()).to(pedidosExchange());
+    }
 
+    // Criação do binding da fila deadletter com o exchange deadletter
+    @Bean
+    public Binding bindingQueueDlq() {
+        return BindingBuilder.bind(notificacaoQueueDlq()).to(pedidosExchangeDlx());
     }
 
     // Criação do RabbitAdmin para inicializar o RabbitMQ
